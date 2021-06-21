@@ -1047,6 +1047,34 @@ gs_plugin_app_install (GsPlugin *plugin,
 				gs_flatpak_error_convert (error);
 				return FALSE;
 			}
+		} else {
+			GsApp *runtime;
+
+			runtime = gs_app_get_runtime (app);
+			if (runtime != NULL && gs_app_get_origin (runtime) != NULL) {
+				g_autoptr(FlatpakInstalledRef) runtime_ref = NULL;
+
+				runtime_ref = flatpak_installation_get_installed_ref (gs_flatpak_get_installation (flatpak),
+						gs_flatpak_app_get_ref_kind (runtime),
+						gs_flatpak_app_get_ref_name (runtime),
+						gs_flatpak_app_get_ref_arch (runtime),
+						gs_app_get_branch (runtime),
+						cancellable,
+						NULL);
+				if (runtime_ref == NULL) {
+					g_clear_pointer (&ref, g_free);
+					ref = gs_flatpak_app_get_ref_display (runtime);
+					if (!flatpak_transaction_add_install (transaction, gs_app_get_origin (runtime), ref, NULL, &error_local)) {
+						if (g_error_matches (error_local, FLATPAK_ERROR, FLATPAK_ERROR_ALREADY_INSTALLED)) {
+							g_clear_error (&error_local);
+						} else {
+							g_propagate_error (error, g_steal_pointer (&error_local));
+							gs_flatpak_error_convert (error);
+							return FALSE;
+						}
+					}
+				}
+			}
 		}
 	}
 
