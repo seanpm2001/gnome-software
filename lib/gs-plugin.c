@@ -1618,6 +1618,8 @@ gs_plugin_action_to_function_name (GsPluginAction action)
 		return "gs_plugin_add_installed";
 	if (action == GS_PLUGIN_ACTION_GET_FEATURED)
 		return "gs_plugin_add_featured";
+	if (action == GS_PLUGIN_ACTION_GET_DISTRO_FEATURED)
+		return "gs_plugin_add_distro_featured";
 	if (action == GS_PLUGIN_ACTION_GET_UPDATES_HISTORICAL)
 		return "gs_plugin_add_updates_historical";
 	if (action == GS_PLUGIN_ACTION_GET_UPDATES)
@@ -1706,6 +1708,8 @@ gs_plugin_action_to_string (GsPluginAction action)
 		return "get-popular";
 	if (action == GS_PLUGIN_ACTION_GET_FEATURED)
 		return "get-featured";
+	if (action == GS_PLUGIN_ACTION_GET_DISTRO_FEATURED)
+		return "get-distro-featured";
 	if (action == GS_PLUGIN_ACTION_SEARCH)
 		return "search";
 	if (action == GS_PLUGIN_ACTION_SEARCH_FILES)
@@ -1796,6 +1800,8 @@ gs_plugin_action_from_string (const gchar *action)
 		return GS_PLUGIN_ACTION_GET_POPULAR;
 	if (g_strcmp0 (action, "get-featured") == 0)
 		return GS_PLUGIN_ACTION_GET_FEATURED;
+	if (g_strcmp0 (action, "get-distro-featured") == 0)
+		return GS_PLUGIN_ACTION_GET_DISTRO_FEATURED;
 	if (g_strcmp0 (action, "search") == 0)
 		return GS_PLUGIN_ACTION_SEARCH;
 	if (g_strcmp0 (action, "search-files") == 0)
