@@ -3766,6 +3766,27 @@ gs_flatpak_add_featured (GsFlatpak *self,
 }
 
 gboolean
+gs_flatpak_add_distro_featured (GsFlatpak *self,
+				GsAppList *list,
+				GCancellable *cancellable,
+				GError **error)
+{
+	g_autoptr(GsAppList) list_tmp = gs_app_list_new ();
+	g_autoptr(GRWLockReaderLocker) locker = NULL;
+
+	if (!gs_flatpak_rescan_app_data (self, cancellable, error))
+		return FALSE;
+
+	locker = g_rw_lock_reader_locker_new (&self->silo_lock);
+	if (!gs_appstream_add_distro_featured (self->silo, list_tmp, cancellable, error))
+		return FALSE;
+
+	gs_app_list_add_list (list, list_tmp);
+
+	return TRUE;
+}
+
+gboolean
 gs_flatpak_add_alternates (GsFlatpak *self,
 			   GsApp *app,
 			   GsAppList *list,

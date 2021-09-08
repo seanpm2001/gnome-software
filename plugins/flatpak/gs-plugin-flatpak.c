@@ -1578,6 +1578,21 @@ gs_plugin_add_featured (GsPlugin *plugin,
 }
 
 gboolean
+gs_plugin_add_distro_featured (GsPlugin *plugin,
+			       GsAppList *list,
+			       GCancellable *cancellable,
+			       GError **error)
+{
+	GsPluginData *priv = gs_plugin_get_data (plugin);
+	for (guint i = 0; i < priv->flatpaks->len; i++) {
+		GsFlatpak *flatpak = g_ptr_array_index (priv->flatpaks, i);
+		if (!gs_flatpak_add_distro_featured (flatpak, list, cancellable, error))
+			return FALSE;
+	}
+	return TRUE;
+}
+
+gboolean
 gs_plugin_add_recent (GsPlugin *plugin,
 		      GsAppList *list,
 		      guint64 age,

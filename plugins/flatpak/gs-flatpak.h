@@ -120,6 +120,10 @@ gboolean	gs_flatpak_add_featured		(GsFlatpak		*self,
 						 GsAppList		*list,
 						 GCancellable		*cancellable,
 						 GError			**error);
+gboolean	gs_flatpak_add_distro_featured	(GsFlatpak		*self,
+						 GsAppList		*list,
+						 GCancellable		*cancellable,
+						 GError			**error);
 gboolean	gs_flatpak_add_alternates	(GsFlatpak		*self,
 						 GsApp			*app,
 						 GsAppList		*list,
