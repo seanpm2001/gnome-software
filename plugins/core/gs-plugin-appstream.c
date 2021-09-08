@@ -1127,6 +1127,22 @@ gs_plugin_add_featured (GsPlugin *plugin,
 }
 
 gboolean
+gs_plugin_add_distro_featured (GsPlugin *plugin,
+			       GsAppList *list,
+			       GCancellable *cancellable,
+			       GError **error)
+{
+	GsPluginData *priv = gs_plugin_get_data (plugin);
+	g_autoptr(GRWLockReaderLocker) locker = NULL;
+
+	if (!gs_plugin_appstream_check_silo (plugin, cancellable, error))
+		return FALSE;
+
+	locker = g_rw_lock_reader_locker_new (&priv->silo_lock);
+	return gs_appstream_add_distro_featured (priv->silo, list, cancellable, error);
+}
+
+gboolean
 gs_plugin_add_recent (GsPlugin *plugin,
 		      GsAppList *list,
 		      guint64 age,
