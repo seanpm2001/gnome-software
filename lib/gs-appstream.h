@@ -46,6 +46,10 @@ gboolean	 gs_appstream_add_featured		(XbSilo		*silo,
 							 GsAppList	*list,
 							 GCancellable	*cancellable,
 							 GError		**error);
+gboolean	 gs_appstream_add_distro_featured	(XbSilo		*silo,
+							 GsAppList	*list,
+							 GCancellable	*cancellable,
+							 GError		**error);
 gboolean	 gs_appstream_add_alternates		(XbSilo		*silo,
 							 GsApp		*app,
 							 GsAppList	*list,

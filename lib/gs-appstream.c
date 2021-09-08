@@ -1635,20 +1635,18 @@ gs_appstream_add_alternates (XbSilo *silo,
 	return TRUE;
 }
 
-gboolean
-gs_appstream_add_featured (XbSilo *silo,
-			   GsAppList *list,
-			   GCancellable *cancellable,
-			   GError **error)
+static gboolean
+gs_appstream_add_featured_with_query (XbSilo *silo,
+				      const gchar *query,
+				      GsAppList *list,
+				      GCancellable *cancellable,
+				      GError **error)
 {
 	g_autoptr(GError) error_local = NULL;
 	g_autoptr(GPtrArray) array = NULL;
 
 	/* find out how many packages are in each category */
-	array = xb_silo_query (silo,
-			       "components/component/custom/value[@key='GnomeSoftware::FeatureTile']/../..|"
-			       "components/component/custom/value[@key='GnomeSoftware::FeatureTile-css']/../..",
-			       0, &error_local);
+	array = xb_silo_query (silo, query, 0, &error_local);
 	if (array == NULL) {
 		if (g_error_matches (error_local, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
 			return TRUE;
@@ -1670,6 +1668,27 @@ gs_appstream_add_featured (XbSilo *silo,
 		gs_app_list_add (list, app);
 	}
 	return TRUE;
+}
+
+gboolean
+gs_appstream_add_featured (XbSilo *silo,
+			   GsAppList *list,
+			   GCancellable *cancellable,
+			   GError **error)
+{
+	const gchar *query = "components/component/custom/value[@key='GnomeSoftware::FeatureTile']/../..|"
+			     "components/component/custom/value[@key='GnomeSoftware::FeatureTile-css']/../..";
+	return gs_appstream_add_featured_with_query (silo, query, list, cancellable, error);
+}
+
+gboolean
+gs_appstream_add_distro_featured (XbSilo *silo,
+				  GsAppList *list,
+				  GCancellable *cancellable,
+				  GError **error)
+{
+	const gchar *query = "components/component/custom/value[@key='GnomeSoftware::DistroFeatured']/../..";
+	return gs_appstream_add_featured_with_query (silo, query, list, cancellable, error);
 }
 
 gboolean
