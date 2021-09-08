@@ -594,6 +594,22 @@ main (int argc, char **argv)
 				break;
 			}
 		}
+	} else if (argc == 2 && g_strcmp0 (argv[1], "distro-featured") == 0) {
+		for (i = 0; i < repeat; i++) {
+			g_autoptr(GsPluginJob) plugin_job = NULL;
+			if (list != NULL)
+				g_object_unref (list);
+			plugin_job = gs_plugin_job_newv (GS_PLUGIN_ACTION_GET_DISTRO_FEATURED,
+							 "refine-flags", self->refine_flags,
+							 "max-results", self->max_results,
+							 NULL);
+			list = gs_plugin_loader_job_process (self->plugin_loader, plugin_job,
+							      NULL, &error);
+			if (list == NULL) {
+				ret = FALSE;
+				break;
+			}
+		}
 	} else if (argc == 2 && g_strcmp0 (argv[1], "recent") == 0) {
 		if (cache_age == 0)
 			cache_age = 60 * 60 * 24 * 60;
