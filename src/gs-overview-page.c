@@ -35,6 +35,7 @@ struct _GsOverviewPage
 	GsShell			*shell;
 	gint			 action_cnt;
 	gboolean		 loading_featured;
+	gboolean		 loading_distro_featured;
 	gboolean		 loading_popular;
 	gboolean		 loading_recent;
 	gboolean		 loading_categories;
@@ -49,11 +50,13 @@ struct _GsOverviewPage
 	GtkWidget		*box_overview;
 	GtkWidget		*box_popular;
 	GtkWidget		*box_recent;
+	GtkWidget		*box_distro_featured;
 	GtkWidget		*flowbox_categories;
 	GtkWidget		*flowbox_iconless_categories;
 	GtkWidget		*iconless_categories_heading;
 	GtkWidget		*popular_heading;
 	GtkWidget		*recent_heading;
+	GtkWidget		*distro_featured_heading;
 	GtkWidget		*scrolledwindow_overview;
 	GtkWidget		*stack_overview;
 };
@@ -113,6 +116,7 @@ gs_overview_page_decrement_action_cnt (GsOverviewPage *self)
 	self->cache_valid = TRUE;
 	g_signal_emit (self, signals[SIGNAL_REFRESHED], 0);
 	self->loading_categories = FALSE;
+	self->loading_distro_featured = FALSE;
 	self->loading_featured = FALSE;
 	self->loading_popular = FALSE;
 	self->loading_recent = FALSE;
@@ -279,6 +283,56 @@ gs_overview_page_get_featured_cb (GObject *source_object,
 	gs_featured_carousel_set_apps (GS_FEATURED_CAROUSEL (self->featured_carousel), list);
 
 	self->empty = self->empty && (gs_app_list_length (list) == 0);
+
+out:
+	gs_overview_page_decrement_action_cnt (self);
+}
+
+static void
+gs_overview_page_get_distro_featured_cb (GObject *source_object,
+					 GAsyncResult *res,
+					 gpointer user_data)
+{
+	GsOverviewPage *self = GS_OVERVIEW_PAGE (user_data);
+	GsPluginLoader *plugin_loader = GS_PLUGIN_LOADER (source_object);
+	guint i;
+	GsApp *app;
+	GtkWidget *tile;
+	g_autoptr(GError) error = NULL;
+	g_autoptr(GsAppList) list = NULL;
+
+	/* get distro-featured apps */
+	list = gs_plugin_loader_job_process_finish (plugin_loader, res, &error);
+	if (list == NULL) {
+		if (!g_error_matches (error, GS_PLUGIN_ERROR, GS_PLUGIN_ERROR_CANCELLED))
+			g_warning ("failed to get distro-featured apps: %s", error->message);
+		goto out;
+	}
+
+	/* not enough to show */
+	if (gs_app_list_length (list) < N_TILES) {
+		g_warning ("Only %u apps for distro-featured list, hiding",
+		           gs_app_list_length (list));
+		gtk_widget_set_visible (self->box_distro_featured, FALSE);
+		gtk_widget_set_visible (self->distro_featured_heading, FALSE);
+		goto out;
+	}
+
+	gs_app_list_randomize (list);
+
+	gs_widget_remove_all (self->box_distro_featured, (GsRemoveFunc) gtk_flow_box_remove);
+
+	for (i = 0; i < gs_app_list_length (list) && i < N_TILES; i++) {
+		app = gs_app_list_index (list, i);
+		tile = gs_summary_tile_new (app);
+		g_signal_connect (tile, "clicked",
+			  G_CALLBACK (app_tile_clicked), self);
+		gtk_flow_box_insert (GTK_FLOW_BOX (self->box_distro_featured), tile, -1);
+	}
+	gtk_widget_set_visible (self->box_distro_featured, TRUE);
+	gtk_widget_set_visible (self->distro_featured_heading, TRUE);
+
+	self->empty = FALSE;
 
 out:
 	gs_overview_page_decrement_action_cnt (self);
@@ -483,6 +537,25 @@ gs_overview_page_load (GsOverviewPage *self)
 		self->action_cnt++;
 	}
 
+	if (!self->loading_distro_featured) {
+		g_autoptr(GsPluginJob) plugin_job = NULL;
+
+		self->loading_distro_featured = TRUE;
+		plugin_job = gs_plugin_job_newv (GS_PLUGIN_ACTION_GET_DISTRO_FEATURED,
+						 "refine-flags", GS_PLUGIN_REFINE_FLAGS_REQUIRE_RATING |
+								 GS_PLUGIN_REFINE_FLAGS_REQUIRE_CATEGORIES |
+								 GS_PLUGIN_REFINE_FLAGS_REQUIRE_ICON,
+						 "dedupe-flags", GS_APP_LIST_FILTER_FLAG_PREFER_INSTALLED |
+								 GS_APP_LIST_FILTER_FLAG_KEY_ID_PROVIDES,
+						 NULL);
+		gs_plugin_loader_job_process_async (self->plugin_loader,
+						    plugin_job,
+						    self->cancellable,
+						    gs_overview_page_get_distro_featured_cb,
+						    self);
+		self->action_cnt++;
+	}
+
 	if (!self->loading_popular) {
 		g_autoptr(GsPluginJob) plugin_job = NULL;
 
@@ -647,9 +720,19 @@ refreshed_cb (GsOverviewPage *self, gpointer user_data)
 static void
 gs_overview_page_init (GsOverviewPage *self)
 {
+	g_autoptr(GsOsRelease) os_release = NULL;
+
 	gtk_widget_init_template (GTK_WIDGET (self));
 
 	g_signal_connect (self, "refreshed", G_CALLBACK (refreshed_cb), self);
+
+	os_release = gs_os_release_new (NULL);
+	if (os_release != NULL) {
+		g_autofree gchar *text = NULL;
+		/* Translators: the '%s' is replaced with the distribution name */
+		text = g_strdup_printf (_("Available for %s"), gs_os_release_get_name (os_release));
+		gtk_label_set_text (GTK_LABEL (self->distro_featured_heading), text);
+	}
 }
 
 static void
@@ -737,11 +820,13 @@ gs_overview_page_class_init (GsOverviewPageClass *klass)
 	gtk_widget_class_bind_template_child (widget_class, GsOverviewPage, box_overview);
 	gtk_widget_class_bind_template_child (widget_class, GsOverviewPage, box_popular);
 	gtk_widget_class_bind_template_child (widget_class, GsOverviewPage, box_recent);
+	gtk_widget_class_bind_template_child (widget_class, GsOverviewPage, box_distro_featured);
 	gtk_widget_class_bind_template_child (widget_class, GsOverviewPage, flowbox_categories);
 	gtk_widget_class_bind_template_child (widget_class, GsOverviewPage, flowbox_iconless_categories);
 	gtk_widget_class_bind_template_child (widget_class, GsOverviewPage, iconless_categories_heading);
 	gtk_widget_class_bind_template_child (widget_class, GsOverviewPage, popular_heading);
 	gtk_widget_class_bind_template_child (widget_class, GsOverviewPage, recent_heading);
+	gtk_widget_class_bind_template_child (widget_class, GsOverviewPage, distro_featured_heading);
 	gtk_widget_class_bind_template_child (widget_class, GsOverviewPage, scrolledwindow_overview);
 	gtk_widget_class_bind_template_child (widget_class, GsOverviewPage, stack_overview);
 	gtk_widget_class_bind_template_callback (widget_class, featured_carousel_app_clicked_cb);
